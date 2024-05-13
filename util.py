@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import os
 from scipy import signal
 from scipy.stats import norm
+from sklearn.decomposition import NMF
+
 
 # CSS4_COLORSから色のリストを取得
 color_list = ['royalblue', 'red', 'green', 'orange']
@@ -39,7 +41,6 @@ class Emg_processor:
         self.sampling = sampling
         self.lowcut = 40
         self.highcut = 35
-
     
     def __call__(self, emg_datas):
         self.law_emg_datas = emg_datas
@@ -48,6 +49,7 @@ class Emg_processor:
         emg_data = self.demeaned(emg_data)
         emg_data = np.abs(emg_data)
         emg_data = self.low_pass_filter(emg_data)
+        self.emg_data = emg_data
         return emg_data
 
     def high_pass_filter(self, data):
@@ -62,7 +64,7 @@ class Emg_processor:
         num_cols = data.shape[1]
         filtered_data = np.zeros_like(data)
         for i in range(num_cols):
-            b, a = signal.butter(1, self.highcut, btype="low", analog=False, fs = self.sampling)
+            b, a = signal.butter(1, self.lowcut, btype="low", analog=False, fs = self.sampling)
             filtered_data[:, i] = signal.lfilter(b, a, data[:, i])
         return filtered_data
     
@@ -82,3 +84,13 @@ class Emg_processor:
             adjusted_emg_data = np.clip(emg_data, lower_bound, upper_bound)
             adjusted_data[:, i] = adjusted_emg_data
         return adjusted_data
+    
+    def get_NMF(self):
+        data = self.emg_data
+        nmf = NMF(n_components=3)
+        nmf.fit(data.T) #(4, N)
+        W = nmf.fit_transform(data)
+        H = nmf.components_
+        return W, H
+
+

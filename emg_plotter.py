@@ -22,3 +22,4 @@ for name, emg_datas in datas.items():
     plt.suptitle(name)
     plt.tight_layout(pad = 2.0)
     plt.savefig("./figure/{}.png".format(os.path.splitext(name)[0]))
+
