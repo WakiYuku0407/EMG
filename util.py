@@ -36,6 +36,37 @@ def load_csv(folder_path):
     
     return datas
 
+def plot_bar(H, type, n_conponents, name, save_path):
+    if type == 'r':
+        labels = list(num2muscle.values())[:2]
+        n_muscle = 2
+    elif type == 'l':
+        labels = list(num2muscle.values())[2:]
+        n_muscle = 2
+    elif type == None:
+        labels = list(num2muscle.values())
+        n_muscle = 4
+
+    #サブプロットの設定
+    if n_conponents > 1:
+        fig , axes = plt.subplots(1, n_conponents, figsize = (5*n_conponents, 5))
+        plt.suptitle("synergy={}, {}".format(n_conponents, name))  
+        plt.tight_layout() 
+        for i in range(n_conponents):
+            data = H[i, :]
+            print(data)
+            axes[i].bar(labels, data) 
+            axes[i].set_title("W{}".format(i+1))
+            axes[i].set_ylim(0, 13)
+        plt.savefig(save_path + "{}_muscle{}_synergy{}.png".format(name, n_muscle , n_conponents))
+
+    else:
+        data = H.flatten()
+        plt.bar(labels, data, linewidth = 1)
+        plt.title("synergy={}, {}".format(n_conponents, name))
+        plt.ylim(0, 13)
+        plt.savefig(save_path + "{}_muscle{}_synergy{}.png".format(name, n_muscle,  n_conponents))
+    plt.close()
 
 class Emg_processor:
     def __init__(self, sampling = 2000):
@@ -45,8 +76,8 @@ class Emg_processor:
     
     def __call__(self, emg_datas):
         self.law_emg_datas = emg_datas
-        #emg_data =  self.adjust_emg(self.law_emg_datas)
-        emg_data = self.law_emg_datas
+        emg_data =  self.adjust_emg(self.law_emg_datas)
+        #emg_data = self.law_emg_datas
         emg_data = self.high_pass_filter(emg_data)
         emg_data = self.demeaned(emg_data)
         emg_data = np.abs(emg_data)
@@ -80,10 +111,12 @@ class Emg_processor:
             emg_data = data[:, i]
             mean = np.mean(emg_data)
             std = np.std(emg_data)
-            # 正規分布の信頼区間を計算します
-            lower_bound, upper_bound = norm.interval(0.95, loc=mean, scale=std)
-            # 信頼区間から外れる値を修正します
-            adjusted_emg_data = np.clip(emg_data, lower_bound, upper_bound)
+            # # 正規分布の信頼区間を計算します
+            # lower_bound, upper_bound = norm.interval(0.95, loc=mean, scale=std)
+            # # 信頼区間から外れる値を修正します
+            lower_bound = mean - 3*std
+            upper_bound = mean + 3*std
+            adjusted_emg_data = np.clip(emg_data, lower_bound , upper_bound)
             adjusted_data[:, i] = adjusted_emg_data
         return adjusted_data
     
@@ -151,6 +184,14 @@ class Emg_processor:
         W = nmf.fit_transform(data)
         H = nmf.components_
         return W, H
+    
+    def get_VAF(self, W, H):
+        restoration = W@H #復元
+        squared_err = (self.normalized_emg_data - restoration)**2
+        squared_data = self.normalized_emg_data ** 2
+        var = np.mean(np.var(squared_err, axis=0)/np.mean(squared_data, axis=0))
+        VAF = 1 - np.mean((np.sum(squared_err, axis=0)/ np.sum(squared_data, axis=0)))
+        return VAF, var
 
 
 

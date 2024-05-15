@@ -25,14 +25,30 @@ for name, emg_datas in all_muscle_emg_datas.items():
     elif file_name.endswith('l'):
         hand = 'l'
 
-    #W, H = processor.get_2muscle_NMF(hand = hand, conponent=1)
-    #print(np.round(W).shape, np.round(H))
-    W, H = processor.get_4muscle_NMF(conponent=3)
-    print(np.round(W).shape)
-    print(np.round(H))
-    print(np.round(W).shape, np.round(H))
-    #plt.plot(W)
-    plt.plot(W@H)
-    plt.show()
-    plt.close()
+    #2筋の1シナジーを求める
+    for i in range(2):
+        n_synergy = i+1
+        W, H = processor.get_2muscle_NMF(hand = hand, conponent=n_synergy)
+        plot_bar(H, hand, n_synergy, name, "./figure/synergy/")
+        #print(processor.get_VAF(W, H))
+
+    #4筋の1~3を調べる
+    VAFs = np.zeros(4)
+    vars = np.zeros(4)
+    for i in range(4):
+        n_synergy = i+1
+        W, H = processor.get_4muscle_NMF(conponent=n_synergy)
+        plot_bar(H, None, n_synergy, name, "./figure/synergy/")
+        VAFs[i], vars[i] = processor.get_VAF(W, H)
+    print("vars", vars)
+
+    #VAFのプロット
+    plt.errorbar([1, 2, 3, 4], VAFs, yerr=vars, fmt='o', capsize=5)
+    plt.ylim(0.5, 1.05)
+    plt.xticks(range(1,5))
+    plt.title("VAF:{}".format(name))
+    plt.xlabel("number of synergy")
+    plt.ylabel("VAF(%)")
+    plt.savefig("./figure/VAF/VAF_{}.png".format(name))
+    
 
