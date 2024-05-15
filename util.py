@@ -5,6 +5,7 @@ import os
 from scipy import signal
 from scipy.stats import norm
 from sklearn.decomposition import NMF
+import math
 
 
 # CSS4_COLORSから色のリストを取得
@@ -44,20 +45,21 @@ class Emg_processor:
     
     def __call__(self, emg_datas):
         self.law_emg_datas = emg_datas
-        emg_data =  self.adjust_emg(self.law_emg_datas)
+        #emg_data =  self.adjust_emg(self.law_emg_datas)
+        emg_data = self.law_emg_datas
         emg_data = self.high_pass_filter(emg_data)
         emg_data = self.demeaned(emg_data)
         emg_data = np.abs(emg_data)
         emg_data = self.low_pass_filter(emg_data)
-        self.emg_data = emg_data
-        return emg_data
+        self.emg_data = np.clip(emg_data, 0, None) #マイナス対策
+        return self.emg_data
 
     def high_pass_filter(self, data):
         num_cols = data.shape[1]
         filtered_data = np.zeros_like(data)
         for i in range(num_cols):
             b, a = signal.butter(3, self.highcut, btype="high", analog=False, fs = self.sampling)
-            filtered_data[:, i] = signal.lfilter(b, a, data[:, i])
+            filtered_data[:, i] = signal.filtfilt(b, a, data[:, i])
         return filtered_data
     
     def low_pass_filter(self, data):
@@ -65,7 +67,7 @@ class Emg_processor:
         filtered_data = np.zeros_like(data)
         for i in range(num_cols):
             b, a = signal.butter(1, self.lowcut, btype="low", analog=False, fs = self.sampling)
-            filtered_data[:, i] = signal.lfilter(b, a, data[:, i])
+            filtered_data[:, i] = signal.filtfilt(b, a, data[:, i])
         return filtered_data
     
     def demeaned(self, data):
@@ -85,12 +87,70 @@ class Emg_processor:
             adjusted_data[:, i] = adjusted_emg_data
         return adjusted_data
     
-    def get_NMF(self):
+    def get_normalized_emg(self):
         data = self.emg_data
-        nmf = NMF(n_components=3)
-        nmf.fit(data.T) #(4, N)
+        max = np.max(data, axis=0)
+        norm_data = data/max
+        self.normalized_emg_data = norm_data
+        return norm_data
+    
+    def plot_prosessed_data(self, save_path, save_name, file_name):
+        self.plotter(self.emg_data, save_path, save_name, file_name)
+
+    def plot_normalized_data(self, save_path, save_name, file_name):
+        self.sub_plotter(self.normalized_emg_data , save_path, save_name, file_name)
+
+    def plotter(self, data, save_path, save_name, file_name):
+        t = np.arange(0, data.shape[0]/self.sampling, 1/self.sampling)
+        for i in range(data.shape[1]):
+            plt.plot(t, data[:, i], label = num2muscle[i+1])
+        plt.xlabel("time(s)")
+        plt.ylabel("EMG")
+        plt.title(file_name)
+        plt.legend()
+        plt.savefig(save_path + save_name + file_name + ".png")
+        plt.close()
+        #np.save(save_path + save_name + file_name + ".npy", data)
+
+    def sub_plotter(self, data, save_path, save_name, file_name):
+        t = np.arange(0, data.shape[0]/self.sampling, 1/self.sampling)
+        # サブプロットを作成
+        fig, axes = plt.subplots(nrows=4, ncols=1, figsize=(10,15))
+        for i in range(4):
+            axes[i].set_ylim(0, 1)
+            axes[i].set_title(num2muscle[i+1])
+            axes[i].grid()
+            axes[i].set_ylabel("EMG")
+            axes[i].set_xlabel("time(s)")
+            axes[i].plot(t ,data[:, i] , color = color_list[i])
+        plt.suptitle(file_name)
+        plt.tight_layout(pad = 2.0)
+        fig.savefig(save_path + save_name + file_name + ".png")
+        plt.close()
+
+    def get_2muscle_NMF(self, hand = None, conponent = 1):
+        data = self.normalized_emg_data
+        if hand == 'r':
+            data = data[:, :2]
+        elif hand == 'l':
+            data = data[:, 2:]
+        else:
+            print("error: chose hand")
+            raise
+        W, H = self.fit_NMF_towmuscle(data, conponent)
+        return W, H
+    
+    def get_4muscle_NMF(self, conponent = 1):
+        data = self.normalized_emg_data
+        W, H = self.fit_NMF_towmuscle(data, conponent)
+        return W, H
+
+    def fit_NMF_towmuscle(self, data, conponent = 1):
+        nmf = NMF(n_components=conponent, init = 'nndsvd', max_iter=1000)
+        nmf.fit(data.T) #(2, N)
         W = nmf.fit_transform(data)
         H = nmf.components_
         return W, H
+
 
 
