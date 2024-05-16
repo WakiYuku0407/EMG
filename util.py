@@ -37,6 +37,8 @@ def load_csv(folder_path):
     return datas
 
 def plot_bar(H, type, n_conponents, name, save_path):
+    #単位分散スケーリング
+    H = H/np.max(H, axis=1, keepdims=True)
     if type == 'r':
         labels = list(num2muscle.values())[:2]
         n_muscle = 2
@@ -54,17 +56,15 @@ def plot_bar(H, type, n_conponents, name, save_path):
         plt.tight_layout() 
         for i in range(n_conponents):
             data = H[i, :]
-            print(data)
             axes[i].bar(labels, data) 
             axes[i].set_title("W{}".format(i+1))
-            axes[i].set_ylim(0, 13)
+            axes[i].set_ylim(0, 1.05)
         plt.savefig(save_path + "{}_muscle{}_synergy{}.png".format(name, n_muscle , n_conponents))
-
     else:
         data = H.flatten()
         plt.bar(labels, data, linewidth = 1)
         plt.title("synergy={}, {}".format(n_conponents, name))
-        plt.ylim(0, 13)
+        plt.ylim(0, 1.05)
         plt.savefig(save_path + "{}_muscle{}_synergy{}.png".format(name, n_muscle,  n_conponents))
     plt.close()
 
@@ -150,12 +150,12 @@ class Emg_processor:
         # サブプロットを作成
         fig, axes = plt.subplots(nrows=4, ncols=1, figsize=(10,15))
         for i in range(4):
+            axes[i].plot(t ,data[:, i] , color = color_list[i], linewidth = 0.5)
             axes[i].set_ylim(0, 1)
             axes[i].set_title(num2muscle[i+1])
             axes[i].grid()
             axes[i].set_ylabel("EMG")
             axes[i].set_xlabel("time(s)")
-            axes[i].plot(t ,data[:, i] , color = color_list[i])
         plt.suptitle(file_name)
         plt.tight_layout(pad = 2.0)
         fig.savefig(save_path + save_name + file_name + ".png")
@@ -179,7 +179,7 @@ class Emg_processor:
         return W, H
 
     def fit_NMF_towmuscle(self, data, conponent = 1):
-        nmf = NMF(n_components=conponent, init = 'nndsvd', max_iter=1000)
+        nmf = NMF(n_components=conponent, init = 'nndsvd', max_iter=100)
         nmf.fit(data.T) #(2, N)
         W = nmf.fit_transform(data)
         H = nmf.components_

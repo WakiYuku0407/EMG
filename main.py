@@ -50,5 +50,6 @@ for name, emg_datas in all_muscle_emg_datas.items():
     plt.xlabel("number of synergy")
     plt.ylabel("VAF(%)")
     plt.savefig("./figure/VAF/VAF_{}.png".format(name))
+    plt.close()
     
 
