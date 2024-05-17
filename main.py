@@ -40,16 +40,20 @@ for name, emg_datas in all_muscle_emg_datas.items():
         W, H = processor.get_4muscle_NMF(conponent=n_synergy)
         plot_bar(H, None, n_synergy, name, "./figure/synergy/")
         VAFs[i], vars[i] = processor.get_VAF(W, H)
+        processor.sub_plotter
+        if i == 2:
+            plot_W(W, "./figure/c_mat/", "cmat", file_name)
     print("vars", vars)
 
     #VAFのプロット
-    plt.errorbar([1, 2, 3, 4], VAFs, yerr=vars, fmt='o', capsize=5)
+    plt.errorbar([1, 2, 3, 4], VAFs, yerr=vars, fmt=' ', linewidth = 2, capsize=10)
     plt.ylim(0.5, 1.05)
     plt.xticks(range(1,5))
     plt.title("VAF:{}".format(name))
     plt.xlabel("number of synergy")
     plt.ylabel("VAF(%)")
-    plt.savefig("./figure/VAF/VAF_{}.png".format(name))
+    plt.savefig("./figure/VAF/VAF_{}.png".format(file_name))
     plt.close()
+    
     
 

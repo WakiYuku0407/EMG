@@ -68,6 +68,31 @@ def plot_bar(H, type, n_conponents, name, save_path):
         plt.savefig(save_path + "{}_muscle{}_synergy{}.png".format(name, n_muscle,  n_conponents))
     plt.close()
 
+def plot_W(data, save_path, save_name, file_name):
+    t = np.arange(0, data.shape[0]/2000, 1/2000)
+    # サブプロットを作成
+    fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(10,15))
+    for i in range(3):
+        axes[i].plot(t ,data[:, i] , color = color_list[i], linewidth = 0.5)
+        axes[i].set_ylim(0, 0.15)
+        axes[i].set_title("c{}".format(i+1))
+        axes[i].grid()
+        # axes[i].set_ylabel("")
+        axes[i].set_xlabel("time(s)")
+    plt.suptitle(file_name)
+    plt.tight_layout(pad = 2.0)
+    fig.savefig(save_path + save_name + file_name + ".png")
+    plt.close()
+    #二枚重ねて表示
+    plt.plot(t, data[:, 1], color = "red", linewidth = 0.5)
+    plt.plot(t, data[:, 2], color = "green", linewidth = 0.5)
+    plt.grid()
+    plt.ylim(0, 0.15)
+    plt.title(file_name)
+    plt.ylabel("time(s)")
+    plt.savefig(save_path + save_name + file_name + "_compare" + ".png")
+    plt.close()
+
 class Emg_processor:
     def __init__(self, sampling = 2000):
         self.sampling = sampling
@@ -189,8 +214,13 @@ class Emg_processor:
         restoration = W@H #復元
         squared_err = (self.normalized_emg_data - restoration)**2
         squared_data = self.normalized_emg_data ** 2
-        var = np.mean(np.var(squared_err, axis=0)/np.mean(squared_data, axis=0))
+        len = squared_data.shape[0]
+        sorted_squared_err = np.sort(squared_err, axis = 0)
+        var_95 = sorted_squared_err[:int(len*0.95), :]
+        var = 1 - np.mean(var_95/np.mean(squared_data, axis=0))
+        #var = np.mean(np.var(squared_err, axis=0)/np.mean(squared_data, axis=0))
         VAF = 1 - np.mean((np.sum(squared_err, axis=0)/ np.sum(squared_data, axis=0)))
+        var = var - VAF
         return VAF, var
 
 
