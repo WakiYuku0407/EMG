@@ -5,3 +5,5 @@
 c3d_to_csv.py : 筋電データが.c3dのデータ景色のため.csvに変換を行う。  
 main.py : 筋電のフィルタリングから筋シナジーの抽出、評価までの処理を記述  
 util.py : main.pyで使用する関数やクラスを記述  
+
+![Test Image 1](figure/normalized_waki100l.png)
